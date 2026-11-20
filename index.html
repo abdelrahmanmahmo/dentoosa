@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:#0b0f1e;overflow:hidden;font-family:"Trebuchet MS",Verdana,Tahoma,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
-#wrap{position:relative;width:min(100vw,177.78vh);aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);font-size:16px}
+#wrap{position:relative;width:min(100vw,177.78vh);aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);font-size:16px;overflow:hidden}
 #g{width:100%;height:100%;display:block}
 #ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,10,30,.66);color:#fff;text-align:center}
 #ov.on{display:flex}
@@ -31,6 +31,32 @@ html,body{margin:0;height:100%;background:#0b0f1e;overflow:hidden;font-family:"T
 #tc button{pointer-events:auto;width:4.4em;height:4.4em;border-radius:50%;border:.2em solid #fff8;background:#0006;color:#fff;font-size:1em;font-weight:bold}
 @media(pointer:coarse){#tc{display:flex}}
 #tc.h{display:none!important}
+/* Responsive layout for phones and tablets */
+@media (max-width: 700px){
+  html,body{width:100%;height:100%;height:100dvh}
+  #wrap{width:100vw;height:100dvh;aspect-ratio:auto;top:0;transform:none;margin:0;font-size:clamp(12px,3.2vw,16px)}
+  #g{width:100%;height:100%;object-fit:fill}
+  .card{max-height:92dvh;overflow-y:auto;padding:.85em 1em;width:94%;}
+  .card h2{font-size:1.3em}
+  .card p{font-size:1em;line-height:1.35}
+  .card.wide{max-width:94%;}
+  .row{flex-direction:column;gap:.7em;text-align:center}
+  .row .im{flex:0 0 auto;width:100%;max-height:38dvh;overflow:hidden}
+  .row .im img,.row .im svg{max-height:38dvh;object-fit:contain}
+  .row .tx{width:100%}
+  .qp{width:96%;margin-bottom:max(2%, env(safe-area-inset-bottom));padding:.7em}
+  .qp .o{grid-template-columns:1fr;gap:.4em}
+  .qp .o button{padding:.65em .7em;font-size:1em}
+  #tc{bottom:max(2%, env(safe-area-inset-bottom));padding:0 5%;}
+  #tc div{gap:.7em}
+  #tc button{width:clamp(3.6em,13vw,4.6em);height:clamp(3.6em,13vw,4.6em);font-size:1em;touch-action:none}
+}
+@media (max-height: 430px) and (orientation:landscape){
+  #wrap{width:100vw;height:100dvh;aspect-ratio:auto;top:0;transform:none;margin:0;font-size:clamp(11px,2.2vw,16px)}
+  .card{max-height:94dvh;overflow-y:auto;padding:.6em 1em}
+  .card p{margin:.35em 0 .5em}
+  #tc{bottom:2%;}
+}
 </style>
 </head>
 <body>
@@ -42,7 +68,7 @@ html,body{margin:0;height:100%;background:#0b0f1e;overflow:hidden;font-family:"T
 <script>
 const $=id=>document.getElementById(id),C=$('g'),X=C.getContext('2d'),W=960,H=540,wrap=$('wrap'),ov=$('ov'),tc=$('tc');
 const m=(v,n)=>((v%n)+n)%n,shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
-function fit(){wrap.style.fontSize=wrap.clientWidth/60+'px'}addEventListener('resize',fit);fit();
+function fit(){wrap.style.fontSize=(matchMedia('(max-width: 700px)').matches?Math.max(12,Math.min(16,wrap.clientWidth/28)):wrap.clientWidth/60)+'px'}addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,100));fit();
 let AC;function snd(f,d=.12,t='square',v=.04){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
 
 /* ---------- illustrations (drawn on a 480x240 canvas) ---------- */
