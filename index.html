@@ -117,7 +117,7 @@ const LV=[
 let S='title',li=0,lv,solids,coins,got,p,banner=0,toast='',toastT=0,fade=0,T=0;
 const K={l:0,r:0,j:0};
 function load(i){li=i;lv=LV[i];solids=lv.g.map(([a,b])=>[a,460,b-a,80,1]).concat(lv.pl.map(a=>[a[0],a[1],a[2],18,0]));
- coins=lv.co.map(([x,y])=>({x,y,got:0}));got=0;lv.q=shuf(INFO[i]);p={x:60,y:380,w:28,h:42,vx:0,vy:0,on:0,f:1,safe:60};S='play';banner=170;tc.className='';ov.className='';}
+ coins=lv.co.map(([x,y])=>({x,y,got:0}));got=0;lv.q=INFO[i].slice();p={x:60,y:380,w:28,h:42,vx:0,vy:0,on:0,f:1,safe:60};S='play';banner=170;tc.className='';ov.className='';}
 function modal(h,cls){ov.innerHTML=h;ov.className='on '+(cls||'')}
 function title(){S='title';tc.className='h';modal(`<div class="card"><h2>Cone-Cut Quest</h2><p>Collect coins, open the gates and defeat the Cone-Cut Monster!</p>
 <p class="ar">اتحرك بالأسهم أو A / D ، واقفز بالمسافة. اجمع الـ 3 عملات في كل مستوى عشان تفتح البوابة.</p><p style="font-size:.85em;opacity:.8">Arrow keys / A D to move · Space or ↑ to jump</p><button class="b" onclick="load(0)">Start ▶</button></div>`)}
