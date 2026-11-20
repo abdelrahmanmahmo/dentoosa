@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cone-Cut Quest</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0b0f1e;overflow:hidden;font-family:"Trebuchet MS",Verdana,Tahoma,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+#wrap{position:relative;width:min(100vw,177.78vh);aspect-ratio:16/9;margin:0 auto;top:50%;transform:translateY(-50%);font-size:16px}
+#g{width:100%;height:100%;display:block}
+#ov{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,10,30,.66);color:#fff;text-align:center}
+#ov.on{display:flex}
+#ov.q{align-items:flex-end;background:none;pointer-events:none}
+.card{background:#16213f;border:.2em solid #ffd34d;border-radius:1em;padding:1em 1.4em;max-width:31em;width:92%;box-shadow:0 .5em 2em #0009;pointer-events:auto}
+.card h2{margin:0 0 .4em;font-size:1.5em;color:#ffd34d}
+.card p{margin:.5em 0 .8em;line-height:1.45;font-size:1em}
+.card canvas{width:100%;border-radius:.5em;display:block}
+.card.wide{max-width:46em}.row{display:flex;gap:1em;align-items:center;text-align:left}.row .im{position:relative;flex:0 0 56%}.row .im img,.row .im svg{width:100%;display:block;border-radius:.5em}.row .im svg{position:absolute;inset:0;height:100%}.row .tx{flex:1}.row .tx h2{font-size:1.3em}.b.s{background:#ff6b81;color:#fff;box-shadow:0 .2em 0 #a8344a;margin-right:.5em}
+.ar{direction:rtl;font-size:.95em;color:#bfe3ff}
+.b{font:inherit;font-weight:bold;padding:.55em 1.1em;border:0;border-radius:.6em;background:#ffd34d;color:#2a1c00;cursor:pointer;box-shadow:0 .2em 0 #b88a00}
+.b:active{transform:translateY(.15em);box-shadow:none}
+.qp{width:95%;margin:0 0 1.6%;background:rgba(12,16,40,.93);border:.15em solid #ff6b81;border-radius:.8em;padding:.6em 1em;pointer-events:auto;color:#fff;text-align:left}
+.qp h3{margin:0 0 .5em;font-size:1.05em}
+.qp .o{display:grid;grid-template-columns:1fr 1fr;gap:.5em}
+.qp .o button{font:inherit;font-size:.9em;padding:.5em .7em;border:0;border-radius:.5em;background:#2f4fd8;color:#fff;cursor:pointer;text-align:left}
+.qp .o button.ok{background:#1faa59}.qp .o button.no{background:#8a2b3a;opacity:.6}
+.qp small{display:block;margin-top:.4em;color:#9ff0c0;min-height:1.2em}
+#tc{position:absolute;bottom:3%;left:0;right:0;display:none;justify-content:space-between;padding:0 3%;pointer-events:none}
+#tc div{display:flex;gap:.8em}
+#tc button{pointer-events:auto;width:4.4em;height:4.4em;border-radius:50%;border:.2em solid #fff8;background:#0006;color:#fff;font-size:1em;font-weight:bold}
+@media(pointer:coarse){#tc{display:flex}}
+#tc.h{display:none!important}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="g" width="960" height="540"></canvas>
+<div id="ov"></div>
+<div id="tc"><div><button id="bl">◀</button><button id="br">▶</button></div><button id="bj">JUMP</button></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),C=$('g'),X=C.getContext('2d'),W=960,H=540,wrap=$('wrap'),ov=$('ov'),tc=$('tc');
+const m=(v,n)=>((v%n)+n)%n,shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function fit(){wrap.style.fontSize=wrap.clientWidth/60+'px'}addEventListener('resize',fit);fit();
+let AC;function snd(f,d=.12,t='square',v=.04){try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}}
+
+/* ---------- illustrations (drawn on a 480x240 canvas) ---------- */
+const tx=(c,t,x,y,s=14,col='#fff',al='center')=>{c.font='bold '+s+'px Verdana,sans-serif';c.fillStyle=col;c.textAlign=al;c.fillText(t,x,y)};
+const tooth=(c,x,y,col='#cfd6dc')=>{c.fillStyle=col;c.beginPath();c.roundRect(x,y,34,55,10);c.fill();c.beginPath();c.moveTo(x+4,y+50);c.lineTo(x+17,y+125);c.lineTo(x+30,y+50);c.fill()};
+function bm(c,cx,cy,r,rx,rot,cap,col){ // beam circle vs rectangular receptor
+ c.fillStyle='#10182b';c.fillRect(0,0,480,240);
+ const rc=()=>c.fillRect(-100,-60,200,120);
+ c.save();c.translate(rx,120);c.rotate(rot);c.fillStyle='#eef3f6';rc();c.restore();
+ c.save();c.beginPath();c.arc(cx,cy,r,0,7);c.clip();c.translate(rx,120);c.rotate(rot);c.fillStyle='#2b3340';rc();c.restore();
+ c.beginPath();c.arc(cx,cy,r,0,7);c.fillStyle='rgba(255,211,77,.16)';c.fill();c.strokeStyle='#ffd34d';c.lineWidth=3;c.setLineDash([8,6]);c.stroke();c.setLineDash([]);
+ tx(c,'X-ray beam',cx,Math.max(18,cy-r-6),13,'#ffd34d');tx(c,cap,240,228,14,col||'#ff8a9a');
+}
+function film(c,cut,q){
+ c.fillStyle='#10182b';c.fillRect(0,0,480,240);c.fillStyle='#2b3340';c.fillRect(100,20,280,170);
+ [140,190,240,290].forEach(x=>tooth(c,x,45));
+ if(cut){c.fillStyle='#eef3f6';c.beginPath();c.moveTo(380,20);c.lineTo(310,20);c.quadraticCurveTo(355,105,310,190);c.lineTo(380,190);c.fill();
+  c.strokeStyle='#ff6b81';c.lineWidth=3;c.beginPath();c.moveTo(400,105);c.lineTo(350,105);c.stroke();tx(c,'Clear area',425,100,12,'#ff6b81');tx(c,'(no X-rays)',425,116,11,'#ff6b81')}
+ if(q){c.strokeStyle='#ff6b81';c.setLineDash([6,5]);c.beginPath();c.arc(335,150,24,0,7);c.stroke();c.setLineDash([]);tx(c,'?',335,160,28,'#ff6b81')}
+ tx(c,q?'Root tip and lesion hidden → missed diagnosis':'Cone-cut radiograph',240,222,14,q?'#ff8a9a':'#fff');
+}
+function pid(c,ok){
+ c.fillStyle='#10182b';c.fillRect(0,0,480,240);
+ const ty=ok?100:30;c.fillStyle='#8892a6';c.fillRect(40,ty,90,46);c.fillStyle='#5d6678';c.fillRect(130,ty+8,16,30);
+ c.fillStyle='rgba(255,211,77,.22)';c.beginPath();c.moveTo(146,ty+23);
+ if(ok){c.lineTo(340,40);c.lineTo(340,200)}else{c.lineTo(340,-10);c.lineTo(340,118)}c.fill();
+ c.fillStyle='#eef3f6';c.fillRect(335,70,16,110);c.fillStyle=ok?'#1faa59':'#ff6b81';
+ if(!ok){c.fillStyle='rgba(255,107,129,.55)';c.fillRect(335,118,16,62)}
+ tooth(c,355,70);tx(c,'PID',85,ty-8,13);tx(c,'Receptor',343,62,12);
+ tx(c,ok?'PID aligned: beam covers the whole receptor':'PID misaligned: lower part not exposed',240,228,14,ok?'#7dffb0':'#ff8a9a');
+}
+function xcp(c){
+ c.fillStyle='#10182b';c.fillRect(0,0,480,240);
+ c.fillStyle='rgba(255,211,77,.2)';c.beginPath();c.moveTo(120,127);c.lineTo(310,55);c.lineTo(310,200);c.fill();
+ c.fillStyle='#8892a6';c.fillRect(20,100,52,54);
+ c.strokeStyle='#aab';c.lineWidth=6;c.beginPath();c.moveTo(300,127);c.lineTo(120,127);c.stroke();
+ c.strokeStyle='#ffa63d';c.lineWidth=8;c.beginPath();c.arc(112,127,36,0,7);c.stroke();
+ c.fillStyle='#e05a5a';c.fillRect(280,115,50,24);c.fillStyle='#eef3f6';c.fillRect(312,70,14,110);
+ tx(c,'PID',46,92,12);tx(c,'Aiming ring',112,78,12,'#ffa63d');tx(c,'Indicator arm',200,115,12,'#cbd');tx(c,'Bite block',305,160,12,'#ff9c9c');tx(c,'Receptor',330,62,12);
+ tx(c,'XCP holder: ring locks the beam onto the receptor',240,228,14,'#7dffb0');
+}
+function chk(c){
+ c.fillStyle='#10182b';c.fillRect(0,0,480,240);
+ ['Receptor covers the whole area','PID aligned with the aiming ring','Beam centered on the receptor'].forEach((t,i)=>{
+  c.fillStyle='#1faa59';c.beginPath();c.arc(70,55+i*50,17,0,7);c.fill();c.strokeStyle='#fff';c.lineWidth=4;c.beginPath();c.moveTo(62,55+i*50);c.lineTo(68,62+i*50);c.lineTo(79,47+i*50);c.stroke();tx(c,t,100,61+i*50,17,'#fff','left')});
+ tx(c,'Then expose ✔',240,222,16,'#ffd34d');
+}
+
+/* ---------- content ---------- */
+const INFO=[[
+ {t:'What is a Cone-Cut Error?',x:'A positioning error where the X-ray beam does not cover the whole receptor (film or sensor), so part of the receptor is never exposed.',i:c=>bm(c,190,120,88,260,0,'Beam shifted: right side unexposed')},
+ {t:'How it looks on a radiograph',x:'A clear (white) unexposed area with a curved or straight sharp edge, usually at one side or corner of the image. The rest of the image looks normal.',i:c=>film(c,1,0),img:'images/cone-cut.jpg'},
+ {t:'Why is it a problem?',x:'Anatomy in the clear area is not recorded. Root tips or lesions can be missed, which leads to an inaccurate diagnosis, delayed treatment, a retake and extra radiation.',i:c=>film(c,1,1)}],[
+ {t:'Cause 1: Incorrect PID alignment',x:'If the PID (the cone) is not aimed at the center of the receptor, the beam lands off-target and one part of the receptor stays unexposed.',i:c=>pid(c,0)},
+ {t:'Cause 2: Beam does not cover the receptor',x:'The receptor is rectangular and the beam is circular. If the beam is too small or shifted, the corners and edges of the receptor are cut off.',i:c=>bm(c,240,120,60,240,0,'Beam too small: corners unexposed')},
+ {t:'Cause 3: Wrong receptor or aiming device position',x:'A receptor that is shifted, tilted or not aligned with the aiming device slips partly out of the beam path.',i:c=>bm(c,240,120,95,330,.2,'Receptor shifted and tilted')}],[
+ {t:'Use XCP holders and beam-aiming devices',x:'The holder keeps the receptor in a fixed position, and the aiming ring guides the PID so the beam is directed at the receptor every time.',i:xcp},
+ {t:'Center the X-ray beam correctly',x:'Aim the beam at the center of the receptor so the circular beam fully covers the rectangle, including its corners.',i:c=>bm(c,240,120,122,240,0,'Beam centered: whole receptor exposed','#7dffb0')},
+ {t:'Check before you press the button',x:'Always confirm the receptor position and the PID alignment before exposure. Fixing it takes seconds; retaking an image exposes the patient again.',i:chk}]];
+const QS=[
+ {q:'What is a cone-cut error?',o:['The beam does not cover the entire receptor','The image is too dark overall','The patient moved during exposure','The film was exposed to white light'],e:'Part of the receptor is never exposed.'},
+ {q:'Which finding, and which consequence, fit a cone-cut?',o:['Clear curved area; hidden anatomy may cause misdiagnosis','Blurry teeth; patient needs no retake','Fully black image; lesions look bigger','Overlapping crowns; caries disappear'],e:'The unexposed area hides anatomy, so diagnosis can be wrong or late.'},
+ {q:'Which of these is a cause of a cone-cut?',o:['PID not aligned with the receptor','Using a beam-aiming device','Centering the beam on the receptor','Checking alignment before exposure'],e:'A misaligned PID sends the beam off the receptor.'},
+ {q:'Which tool helps prevent a cone-cut?',o:['An XCP holder with an aiming ring','A longer exposure time','A darker developing solution','A smaller receptor'],e:'The ring guides the PID to the receptor each time.'},
+ {q:'What should you do right before exposure?',o:['Check receptor and PID alignment and center the beam','Expose first, then adjust','Move the PID away from the ring','Ask the patient to hold the film by hand'],e:'A quick check prevents a retake.'}];
+
+/* ---------- levels ---------- */
+const LV=[
+ {n:'Level 1 – Meet the Error',w:2400,g:[[0,1000],[1110,2400]],pl:[[300,385,130],[560,325,130],[820,390,110],[1250,385,150],[1520,320,140],[1780,385,130],[2000,325,120]],co:[[625,287],[1595,277],[2060,287]],gate:2260},
+ {n:'Level 2 – Find the Causes',w:2800,g:[[0,700],[810,1500],[1610,2800]],pl:[[250,390,120],[480,325,120],[950,390,120],[1180,325,120],[1400,260,110],[1720,390,120],[1960,330,120],[2200,270,120]],co:[[540,287],[1455,222],[2260,232]],gate:2660},
+ {n:'Level 3 – Prevent the Error',w:3000,g:[[0,600],[710,1300],[1410,1900],[2010,3000]],pl:[[200,390,110],[400,330,110],[820,390,120],[1050,325,120],[1500,390,100],[1700,325,100],[1890,385,140],[2250,385,120],[2480,315,120],[2700,385,100]],co:[[455,292],[1110,287],[2540,277]],gate:2880}];
+let S='title',li=0,lv,solids,coins,got,p,banner=0,toast='',toastT=0,fade=0,T=0;
+const K={l:0,r:0,j:0};
+function load(i){li=i;lv=LV[i];solids=lv.g.map(([a,b])=>[a,460,b-a,80,1]).concat(lv.pl.map(a=>[a[0],a[1],a[2],18,0]));
+ coins=lv.co.map(([x,y])=>({x,y,got:0}));got=0;lv.q=shuf(INFO[i]);p={x:60,y:380,w:28,h:42,vx:0,vy:0,on:0,f:1,safe:60};S='play';banner=170;tc.className='';ov.className='';}
+function modal(h,cls){ov.innerHTML=h;ov.className='on '+(cls||'')}
+function title(){S='title';tc.className='h';modal(`<div class="card"><h2>Cone-Cut Quest</h2><p>Collect coins, open the gates and defeat the Cone-Cut Monster!</p>
+<p class="ar">اتحرك بالأسهم أو A / D ، واقفز بالمسافة. اجمع الـ 3 عملات في كل مستوى عشان تفتح البوابة.</p><p style="font-size:.85em;opacity:.8">Arrow keys / A D to move · Space or ↑ to jump</p><button class="b" onclick="load(0)">Start ▶</button></div>`)}
+function info(){const d=lv.q[got-1];S='info';tc.className='h';
+ if(d.img){modal(`<div class="card wide"><div class="row"><div class="im" id="im"><img src="${d.img}" alt="Radiograph showing a cone-cut error" onerror="imgFail()"><svg id="lb" viewBox="0 0 1080 798"><path d="M835 190C820 330 650 560 420 798" fill="none" stroke="#ff2d55" stroke-width="7" stroke-dasharray="22 14"/><path d="M820 470L705 500" stroke="#ff2d55" stroke-width="7"/><path d="M705 500l30-28v50z" fill="#ff2d55"/><text x="905" y="370" text-anchor="middle" font-size="50" font-weight="bold" fill="#ff2d55" font-family="Verdana">Clear area</text><text x="905" y="425" text-anchor="middle" font-size="42" fill="#ff2d55" font-family="Verdana">(unexposed)</text></svg></div>
+ <div class="tx"><h2>${d.t}</h2><p>${d.x}</p><button class="b s" onclick="$('lb').style.display=$('lb').style.display=='none'?'':'none'">Show / hide labels</button><button class="b" onclick="cont()">Continue ▶</button></div></div></div>`);window._d=d;return}
+ modal(`<div class="card"><h2>${d.t}</h2><canvas id="ill" width="480" height="240"></canvas><p>${d.x}</p><button class="b" onclick="cont()">Continue ▶</button></div>`);d.i($('ill').getContext('2d'))}
+function imgFail(){$('im').innerHTML='<canvas id="ill" width="480" height="240" style="width:100%;border-radius:.5em"></canvas>';window._d.i($('ill').getContext('2d'))}
+function cont(){ov.className='';S='play';tc.className='';if(got==3){toast='The gate is open!';toastT=150;snd(660,.3,'triangle')}}
+
+/* ---------- play ---------- */
+function upd(){
+ p.vx=(K.r-K.l)*4.3;if(p.vx)p.f=Math.sign(p.vx);
+ if(K.j&&p.on){p.vy=-12.8;p.on=0;snd(520,.1,'square',.03)}
+ p.vy=Math.min(p.vy+.62,15);p.x=Math.max(0,Math.min(lv.w-p.w,p.x+p.vx));p.y+=p.vy;p.on=0;
+ for(const s of solids)if(p.x+p.w>s[0]&&p.x<s[0]+s[2]){const b=p.y+p.h;if(p.vy>=0&&b-p.vy<=s[1]+1&&b>=s[1]){p.y=s[1]-p.h;p.vy=0;p.on=1;if(s[4])p.safe=p.x}}
+ if(p.y>H+80){p.x=Math.max(20,p.safe-50);p.y=380;p.vy=0;snd(150,.3,'sawtooth')}
+ for(const c of coins)if(!c.got&&Math.hypot(p.x+14-c.x,p.y+21-c.y)<30){c.got=1;got++;snd(880,.08);setTimeout(()=>snd(1320,.2),80);info();return}
+ const gx=lv.gate;if(p.x+p.w>gx&&p.x<gx+56){if(got==3){S='trans';fade=0}else if(toastT<=0){toast='Collect all 3 coins to open the gate';toastT=120}}
+}
+function bgd(t,cam){
+ const g=X.createLinearGradient(0,0,0,H);const cs=[['#aee3ff','#eefaff'],['#070c24','#1c2c66'],['#ff9e7a','#ffe9a8']][t];g.addColorStop(0,cs[0]);g.addColorStop(1,cs[1]);X.fillStyle=g;X.fillRect(0,0,W,H);
+ if(t==0){X.fillStyle='#fff';for(let i=0;i<6;i++){const x=m(i*260-cam*.2,W+300)-150,y=60+i%3*50;X.beginPath();X.arc(x,y,28,0,7);X.arc(x+30,y+6,22,0,7);X.arc(x-30,y+8,20,0,7);X.fill()}
+  for(let i=0;i<4;i++){const x=m(i*330-cam*.45,W+300)-100;X.fillStyle='#ffffffb0';X.fillRect(x,150,90,200);X.fillStyle='#8fd0ea';X.fillRect(x+8,158,74,184);X.fillStyle='#ffffff90';X.fillRect(x+42,158,6,184)}}
+ if(t==1){X.strokeStyle='#2c44a8';X.lineWidth=1;for(let i=0;i<14;i++){const x=m(i*80-cam*.4,W+80)-40;X.beginPath();X.moveTo(x,0);X.lineTo(x,H);X.stroke()}for(let j=0;j<7;j++){X.beginPath();X.moveTo(0,j*80);X.lineTo(W,j*80);X.stroke()}
+  for(let i=0;i<4;i++){const x=m(i*300-cam*.3,W+300)-100,y=120+i%2*140;X.strokeStyle='#7cf5';X.lineWidth=3;X.beginPath();X.arc(x,y,40+Math.sin(T/30+i)*6,0,7);X.stroke();X.fillStyle='#7cf6';X.beginPath();X.arc(x,y,8,0,7);X.fill()}}
+ if(t==2){X.fillStyle='#fff6c8';X.beginPath();X.arc(760,130,60,0,7);X.fill();
+  [['#7fc77a',.25,330],['#4fa860',.5,380]].forEach(([c,k,y])=>{X.fillStyle=c;for(let i=0;i<8;i++){const x=m(i*300-cam*k,W+500)-250;X.beginPath();X.ellipse(x,y+120,200,130,0,Math.PI,0);X.fill()}})}
+}
+function world(){
+ const t=li,cam=Math.max(0,Math.min(lv.w-W,p.x-W/2));bgd(t,cam);
+ const gc=[['#e3edf2','#3fb6c4'],['#222f5c','#8a6cff'],['#4a9d5b','#86e070']][t],pc=[['#3fb6c4','#fff'],['#3b4a8f','#7cf5ff'],['#a8683a','#86e070']][t];
+ for(const s of solids){const x=s[0]-cam;if(x>W||x+s[2]<0)continue;if(s[4]){X.fillStyle=gc[0];X.fillRect(x,s[1],s[2],s[3]);X.fillStyle=gc[1];X.fillRect(x,s[1],s[2],14)}else{X.fillStyle=pc[0];X.beginPath();X.roundRect(x,s[1],s[2],s[3],5);X.fill();X.fillStyle=pc[1];X.fillRect(x+3,s[1],s[2]-6,5)}}
+ // gate
+ const gx=lv.gate-cam,open=got==3;X.fillStyle='#3a2a20';X.fillRect(gx-8,340,72,120);
+ if(open){const gr=X.createRadialGradient(gx+28,400,5,gx+28,400,55);gr.addColorStop(0,'#fff');gr.addColorStop(1,'#35d0ff');X.fillStyle=gr;X.beginPath();X.roundRect(gx,350,56,110,[28,28,0,0]);X.fill();X.strokeStyle='#fff9';X.lineWidth=3;for(let i=0;i<3;i++){X.beginPath();X.ellipse(gx+28,405,10+i*8+Math.sin(T/10+i)*3,18+i*14,0,0,7);X.stroke()}}
+ else{X.fillStyle='#6b4a36';X.beginPath();X.roundRect(gx,350,56,110,[28,28,0,0]);X.fill();X.fillStyle='#4a3224';for(let i=1;i<4;i++)X.fillRect(gx+i*13,352,4,108);X.fillStyle='#ffd34d';X.fillRect(gx+19,395,18,16);X.strokeStyle='#ffd34d';X.lineWidth=3;X.beginPath();X.arc(gx+28,393,7,Math.PI,0);X.stroke()}
+ // coins (identical)
+ for(const c of coins)if(!c.got){const w=Math.abs(Math.cos(T/18))*13+3,y=c.y+Math.sin(T/20+c.x)*4;X.fillStyle='#ffb800';X.beginPath();X.ellipse(c.x-cam,y,w,15,0,0,7);X.fill();X.fillStyle='#ffe066';X.beginPath();X.ellipse(c.x-cam,y,w*.6,10,0,0,7);X.fill()}
+ // player
+ const px=p.x-cam,py=p.y;X.save();X.translate(px+14,py);X.scale(p.f,1);
+ X.fillStyle='#2f7de0';X.fillRect(-12,18,24,20);X.fillStyle='#fff';X.fillRect(-12,18,24,6);X.fillStyle='#333';const lg=p.on?Math.sin(T/3)*p.vx/2:4;X.fillRect(-10,36,8,6+lg*.3);X.fillRect(2,36,8,6-lg*.3);
+ X.fillStyle='#f2c29b';X.beginPath();X.arc(0,10,11,0,7);X.fill();X.fillStyle='#3fb6c4';X.fillRect(-11,2,22,7);X.fillStyle='#e8f6f8';X.fillRect(-1,10,12,7);X.fillStyle='#222';X.fillRect(3,6,3,4);X.restore();
+ // HUD
+ X.fillStyle='#000a';X.beginPath();X.roundRect(14,12,300,52,12);X.fill();X.fillStyle='#fff';X.font='bold 15px Verdana';X.textAlign='left';X.fillText(lv.n,28,34);
+ for(let i=0;i<3;i++){X.fillStyle=i<got?'#ffb800':'#ffffff33';X.beginPath();X.arc(36+i*30,50,9,0,7);X.fill()}X.fillStyle='#fff';X.font='13px Verdana';X.fillText(got+' / 3 coins',130,55);
+ if(banner>0){banner--;X.globalAlpha=Math.min(1,banner/30);X.fillStyle='#000b';X.fillRect(0,200,W,90);tx(X,lv.n,W/2,255,34,'#ffd34d');X.globalAlpha=1}
+ if(toastT>0){toastT--;X.fillStyle='#000c';X.beginPath();X.roundRect(W/2-190,80,380,40,10);X.fill();tx(X,toast,W/2,106,16)}
+ if(S=='trans'){fade+=.03;X.fillStyle=`rgba(0,0,0,${Math.min(1,fade)})`;X.fillRect(0,0,W,H);if(fade>=1.1){li<2?load(li+1):boss()}}
+}
+
+/* ---------- final boss ---------- */
+let qi=0,lives=3,th=0,hv=0,shake=0,order,cur;
+const lerp=(a,b,t)=>a+(b-a)*t,mix=(a,b,t)=>'rgb('+a.map((v,i)=>Math.round(lerp(v,b[i],t))).join()+')';
+function drawTooth(x,y,s,h){
+ X.save();X.translate(x,y);X.scale(s,s);
+ if(h>=1){const gl=X.createRadialGradient(0,0,20,0,0,170);gl.addColorStop(0,'#fff9');gl.addColorStop(1,'#fff0');X.fillStyle=gl;X.fillRect(-170,-170,340,340)}
+ X.beginPath();X.moveTo(-62,-55);X.bezierCurveTo(-62,-105,-15,-95,0,-78);X.bezierCurveTo(15,-95,62,-105,62,-55);X.bezierCurveTo(68,-10,45,25,40,70);X.bezierCurveTo(37,115,18,118,14,80);X.bezierCurveTo(10,45,-10,45,-14,80);X.bezierCurveTo(-18,118,-37,115,-40,70);X.bezierCurveTo(-45,25,-68,-10,-62,-55);X.closePath();
+ X.fillStyle=mix([150,128,52],[252,254,255],h);X.fill();X.lineWidth=4;X.strokeStyle=mix([70,50,20],[170,210,230],h);X.stroke();
+ X.save();X.clip();[[-30,-60,16],[28,-45,13],[-10,10,18],[30,30,12],[-32,35,11]].forEach(([a,b,r],i)=>{if(h<(i+1)/5-.05){X.fillStyle='#3a2410';X.beginPath();X.arc(a,b,r*(1-h),0,7);X.fill()}});X.restore();
+ const ey=-28;
+ if(h<.6){[-22,22].forEach(a=>{X.fillStyle='#fff';X.beginPath();X.ellipse(a,ey,11,9,0,0,7);X.fill();X.fillStyle='#d02030';X.beginPath();X.arc(a,ey+1,5,0,7);X.fill();X.strokeStyle='#2a1500';X.lineWidth=4;X.beginPath();X.moveTo(a+12*Math.sign(a),ey-18);X.lineTo(a-12*Math.sign(a),ey-6);X.stroke()})}
+ else{X.strokeStyle='#243a5a';X.lineWidth=4;[-22,22].forEach(a=>{X.beginPath();X.arc(a,ey+4,9,Math.PI*1.1,Math.PI*1.9);X.stroke()});if(h>=1){X.fillStyle='#ff9db0aa';[-40,40].forEach(a=>{X.beginPath();X.ellipse(a,ey+22,9,6,0,0,7);X.fill()})}}
+ X.strokeStyle=h<.6?'#2a1500':'#243a5a';X.lineWidth=4;X.beginPath();X.moveTo(-24,28);X.quadraticCurveTo(0,28+lerp(-26,26,h),24,28);X.stroke();
+ if(h<.35){X.fillStyle='#8f9a3a';X.globalAlpha=.7;for(let i=0;i<3;i++){X.beginPath();X.arc(-50+i*50,-110-Math.sin(T/15+i)*8,7+i,0,7);X.fill()}X.globalAlpha=1}
+ if(h>=1){X.fillStyle='#fff';for(let i=0;i<6;i++){const a=T/40+i*1.05,r=95+Math.sin(T/12+i)*10;X.save();X.translate(Math.cos(a)*r,Math.sin(a)*r*.8);X.rotate(T/20);X.fillRect(-2,-9,4,18);X.fillRect(-9,-2,18,4);X.restore()}}
+ X.restore();
+}
+function boss(){S='boss';li=3;tc.className='h';qi=0;lives=3;th=0;hv=0;
+ modal(`<div class="card"><h2>Level 4 – The Final Boss</h2><p>A tooth with decay and pain, caused by a radiograph error that delayed the right diagnosis and treatment.</p><p>Answer 5 questions to heal it. A wrong answer costs a chance (♥), and you only have 3.</p><button class="b" onclick="fight()">Fight! ▶</button></div>`)}
+function fight(){qi=0;lives=3;th=0;order=QS.map(q=>({...q,o:shuf(q.o.map((t,i)=>({t,c:!i})))}));ask()}
+function ask(){cur=order[qi];modal(`<div class="qp"><h3>Question ${qi+1} of 5 — ${cur.q}</h3><div class="o">${cur.o.map((o,i)=>`<button onclick="pick(${i},this)">${o.t}</button>`).join('')}</div><small id="fb"></small></div>`,'q')}
+function pick(i,b){
+ if(cur.o[i].c){document.querySelectorAll('.o button').forEach(x=>x.disabled=true);b.className='ok';$('fb').textContent='Correct! '+cur.e;th=(qi+1)/5;snd(784,.15);setTimeout(()=>snd(1046,.25),120);
+  setTimeout(()=>{if(++qi<5)ask();else win()},1500)}
+ else{b.className='no';b.disabled=true;lives--;shake=30;snd(140,.3,'sawtooth');$('fb').textContent='';if(lives<=0){document.querySelectorAll('.o button').forEach(x=>x.disabled=true);setTimeout(lose,700)}}
+}
+function lose(){modal(`<div class="card"><h2>The monster won this round</h2><p>You ran out of chances. Review the levels and try again.</p><button class="b" onclick="fight()">Try again ▶</button></div>`)}
+function win(){S='win';snd(1046,.4,'triangle');modal(`<div class="card"><h2>The tooth is healed! 🦷✨</h2><p>You can now recognize a cone-cut error, find its causes, and prevent it with correct alignment and centering.</p><p class="ar">برافو! السنة بقت سليمة وجميلة.</p><button class="b" onclick="title()">Play again</button></div>`)}
+function bossScene(){
+ const g=X.createLinearGradient(0,0,0,H);g.addColorStop(0,mix([40,10,50],[90,170,230],hv));g.addColorStop(1,mix([90,20,30],[200,240,255],hv));X.fillStyle=g;X.fillRect(0,0,W,H);
+ X.fillStyle=mix([20,5,25],[140,210,170],hv);X.fillRect(0,420,W,120);
+ for(let i=0;i<16;i++){X.fillStyle='rgba(255,255,255,.12)';X.beginPath();X.arc(m(i*97+T*.3,W),m(i*61-T*.4,H),3+i%3,0,7);X.fill()}
+ hv+=(th-hv)*.05;if(shake>0)shake--;
+ const sx=shake?Math.sin(T*2)*shake*.5:0;drawTooth(480+sx,200,1.2+(shake?.04:0),hv);
+ X.fillStyle='#000a';X.beginPath();X.roundRect(14,12,330,48,12);X.fill();tx(X,'Tooth health',28,32,13,'#fff','left');X.fillStyle='#fff3';X.fillRect(28,40,300,10);X.fillStyle=mix([220,60,60],[60,220,120],hv);X.fillRect(28,40,300*hv,10);
+ X.fillStyle='#000a';X.beginPath();X.roundRect(W-170,12,156,48,12);X.fill();tx(X,'Chances',W-155,32,13,'#fff','left');for(let i=0;i<3;i++)tx(X,'♥',W-150+i*32,54,22,i<lives?'#ff4d6d':'#ffffff33','left');
+}
+
+/* ---------- loop ---------- */
+let last=0,acc=0;
+function frame(t){const d=Math.min(100,t-last);last=t;acc+=d;while(acc>=16.67){acc-=16.67;T++;if(S=='play')upd()}
+ if(S=='boss'||S=='win')bossScene();else if(lv&&S!='title'){world()}else{lv=lv||LV[0];if(!p)p={x:300,y:380,w:28,h:42,f:1,on:1};li=0;if(!solids)load(0),title();world()}
+ requestAnimationFrame(frame)}
+const kd=(e,v)=>{const k=e.key.toLowerCase();if(['arrowleft','a'].includes(k))K.l=v;if(['arrowright','d'].includes(k))K.r=v;if([' ','arrowup','w'].includes(k)){K.j=v;e.preventDefault()}};
+addEventListener('keydown',e=>kd(e,1));addEventListener('keyup',e=>kd(e,0));
+[['bl','l'],['br','r'],['bj','j']].forEach(([id,k])=>{const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();K[k]=1});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>K[k]=0))});
+title();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
